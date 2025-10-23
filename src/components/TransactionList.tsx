@@ -2,8 +2,10 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
-import { Loader2 } from "lucide-react";
+import { Loader2, Download } from "lucide-react";
 
 interface Transaction {
   id: string;
@@ -25,6 +27,7 @@ interface TransactionListProps {
 const TransactionList = ({ refreshKey }: TransactionListProps) => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
     loadTransactions();
@@ -57,10 +60,65 @@ const TransactionList = ({ refreshKey }: TransactionListProps) => {
     setIsLoading(false);
   };
 
+  const exportToCSV = async () => {
+    const { data, error } = await supabase
+      .from("transactions")
+      .select(`
+        amount,
+        merchant,
+        description,
+        date,
+        category:categories (name)
+      `)
+      .order("date", { ascending: false });
+
+    if (error) {
+      toast({
+        title: "Export failed",
+        description: "Failed to export transactions.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Create CSV content
+    const headers = ["Date", "Merchant", "Description", "Category", "Amount"];
+    const csvRows = [
+      headers.join(","),
+      ...data.map((tx) =>
+        [
+          format(new Date(tx.date), "yyyy-MM-dd"),
+          `"${tx.merchant}"`,
+          `"${tx.description || ""}"`,
+          `"${tx.category?.name || ""}"`,
+          tx.amount,
+        ].join(",")
+      ),
+    ];
+
+    const csvContent = csvRows.join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `transactions_${format(new Date(), "yyyy-MM-dd")}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+
+    toast({
+      title: "Export successful",
+      description: "Transactions exported to CSV.",
+    });
+  };
+
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Recent Transactions</CardTitle>
+        <Button onClick={exportToCSV} variant="outline" size="sm">
+          <Download className="h-4 w-4 mr-2" />
+          Export CSV
+        </Button>
       </CardHeader>
       <CardContent>
         {isLoading ? (

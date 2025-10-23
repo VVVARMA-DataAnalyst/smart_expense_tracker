@@ -10,6 +10,9 @@ import AddTransactionDialog from "@/components/AddTransactionDialog";
 import TransactionList from "@/components/TransactionList";
 import SpendingSummary from "@/components/SpendingSummary";
 import BudgetManager from "@/components/BudgetManager";
+import RecurringPayments from "@/components/RecurringPayments";
+import InsightsPanel from "@/components/InsightsPanel";
+import BillReminders from "@/components/BillReminders";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -87,6 +90,13 @@ const Dashboard = () => {
 
           <SpendingSummary refreshKey={refreshKey} />
           
+          <InsightsPanel />
+          
+          <div className="grid gap-6 md:grid-cols-2">
+            <RecurringPayments />
+            <BillReminders />
+          </div>
+
           <div className="grid gap-6 md:grid-cols-2">
             <TransactionList refreshKey={refreshKey} />
             <BudgetManager />

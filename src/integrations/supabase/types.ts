@@ -14,6 +14,59 @@ export type Database = {
   }
   public: {
     Tables: {
+      bills: {
+        Row: {
+          amount: number
+          category_id: string | null
+          created_at: string
+          due_date: string
+          frequency: string
+          id: string
+          is_paid: boolean
+          name: string
+          notes: string | null
+          reminder_days: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          category_id?: string | null
+          created_at?: string
+          due_date: string
+          frequency: string
+          id?: string
+          is_paid?: boolean
+          name: string
+          notes?: string | null
+          reminder_days?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          category_id?: string | null
+          created_at?: string
+          due_date?: string
+          frequency?: string
+          id?: string
+          is_paid?: boolean
+          name?: string
+          notes?: string | null
+          reminder_days?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bills_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       budgets: {
         Row: {
           alert_threshold: number | null
@@ -109,6 +162,95 @@ export type Database = {
         }
         Relationships: []
       }
+      recurring_patterns: {
+        Row: {
+          amount: number
+          confidence: number
+          created_at: string
+          frequency: string
+          id: string
+          is_active: boolean
+          merchant: string
+          next_expected_date: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          confidence?: number
+          created_at?: string
+          frequency: string
+          id?: string
+          is_active?: boolean
+          merchant: string
+          next_expected_date?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          confidence?: number
+          created_at?: string
+          frequency?: string
+          id?: string
+          is_active?: boolean
+          merchant?: string
+          next_expected_date?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      spending_insights: {
+        Row: {
+          amount: number | null
+          category_id: string | null
+          created_at: string
+          description: string
+          id: string
+          insight_date: string
+          insight_type: string
+          is_dismissed: boolean
+          severity: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          amount?: number | null
+          category_id?: string | null
+          created_at?: string
+          description: string
+          id?: string
+          insight_date?: string
+          insight_type: string
+          is_dismissed?: boolean
+          severity?: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          amount?: number | null
+          category_id?: string | null
+          created_at?: string
+          description?: string
+          id?: string
+          insight_date?: string
+          insight_type?: string
+          is_dismissed?: boolean
+          severity?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "spending_insights_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       transactions: {
         Row: {
           amount: number
@@ -120,7 +262,9 @@ export type Database = {
           description: string | null
           id: string
           merchant: string | null
+          merchant_normalized: string | null
           receipt_url: string | null
+          recurring_pattern_id: string | null
           source: string
           tags: string[] | null
           updated_at: string
@@ -136,7 +280,9 @@ export type Database = {
           description?: string | null
           id?: string
           merchant?: string | null
+          merchant_normalized?: string | null
           receipt_url?: string | null
+          recurring_pattern_id?: string | null
           source?: string
           tags?: string[] | null
           updated_at?: string
@@ -152,7 +298,9 @@ export type Database = {
           description?: string | null
           id?: string
           merchant?: string | null
+          merchant_normalized?: string | null
           receipt_url?: string | null
+          recurring_pattern_id?: string | null
           source?: string
           tags?: string[] | null
           updated_at?: string
@@ -164,6 +312,13 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_recurring_pattern_id_fkey"
+            columns: ["recurring_pattern_id"]
+            isOneToOne: false
+            referencedRelation: "recurring_patterns"
             referencedColumns: ["id"]
           },
         ]
