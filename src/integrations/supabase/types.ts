@@ -14,6 +14,50 @@ export type Database = {
   }
   public: {
     Tables: {
+      auto_categorization_rules: {
+        Row: {
+          category_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          merchant_pattern: string
+          name: string
+          priority: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          merchant_pattern: string
+          name: string
+          priority?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          merchant_pattern?: string
+          name?: string
+          priority?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_auto_rules_category"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bills: {
         Row: {
           amount: number
@@ -63,6 +107,41 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      budget_shares: {
+        Row: {
+          budget_id: string
+          created_at: string
+          id: string
+          permission: string
+          shared_by_user_id: string
+          user_id: string
+        }
+        Insert: {
+          budget_id: string
+          created_at?: string
+          id?: string
+          permission?: string
+          shared_by_user_id: string
+          user_id: string
+        }
+        Update: {
+          budget_id?: string
+          created_at?: string
+          id?: string
+          permission?: string
+          shared_by_user_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_budget_shares_budget"
+            columns: ["budget_id"]
+            isOneToOne: false
+            referencedRelation: "budgets"
             referencedColumns: ["id"]
           },
         ]
@@ -144,6 +223,7 @@ export type Database = {
           currency: string | null
           full_name: string | null
           id: string
+          premium_tier: string | null
           updated_at: string
         }
         Insert: {
@@ -151,6 +231,7 @@ export type Database = {
           currency?: string | null
           full_name?: string | null
           id: string
+          premium_tier?: string | null
           updated_at?: string
         }
         Update: {
@@ -158,9 +239,57 @@ export type Database = {
           currency?: string | null
           full_name?: string | null
           id?: string
+          premium_tier?: string | null
           updated_at?: string
         }
         Relationships: []
+      }
+      recommendations: {
+        Row: {
+          category_id: string | null
+          created_at: string
+          description: string
+          id: string
+          is_applied: boolean
+          is_dismissed: boolean
+          potential_savings: number | null
+          recommendation_type: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          category_id?: string | null
+          created_at?: string
+          description: string
+          id?: string
+          is_applied?: boolean
+          is_dismissed?: boolean
+          potential_savings?: number | null
+          recommendation_type: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          category_id?: string | null
+          created_at?: string
+          description?: string
+          id?: string
+          is_applied?: boolean
+          is_dismissed?: boolean
+          potential_savings?: number | null
+          recommendation_type?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_recommendations_category"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       recurring_patterns: {
         Row: {
@@ -200,6 +329,53 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      savings_goals: {
+        Row: {
+          category_id: string | null
+          created_at: string
+          current_amount: number
+          deadline: string | null
+          id: string
+          is_completed: boolean
+          name: string
+          target_amount: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category_id?: string | null
+          created_at?: string
+          current_amount?: number
+          deadline?: string | null
+          id?: string
+          is_completed?: boolean
+          name: string
+          target_amount: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category_id?: string | null
+          created_at?: string
+          current_amount?: number
+          deadline?: string | null
+          id?: string
+          is_completed?: boolean
+          name?: string
+          target_amount?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_savings_goals_category"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       spending_insights: {
         Row: {

@@ -13,6 +13,10 @@ import BudgetManager from "@/components/BudgetManager";
 import RecurringPayments from "@/components/RecurringPayments";
 import InsightsPanel from "@/components/InsightsPanel";
 import BillReminders from "@/components/BillReminders";
+import SavingsGoals from "@/components/SavingsGoals";
+import SmartRules from "@/components/SmartRules";
+import RecommendationsPanel from "@/components/RecommendationsPanel";
+import SharedBudgets from "@/components/SharedBudgets";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -90,16 +94,27 @@ const Dashboard = () => {
 
           <SpendingSummary refreshKey={refreshKey} />
           
-          <InsightsPanel />
+          <RecommendationsPanel />
+          
+          <div className="grid gap-6 md:grid-cols-2">
+            <SavingsGoals />
+            <SmartRules />
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-2">
+            <BudgetManager />
+            <SharedBudgets />
+          </div>
           
           <div className="grid gap-6 md:grid-cols-2">
             <RecurringPayments />
             <BillReminders />
           </div>
+          
+          <InsightsPanel />
 
           <div className="grid gap-6 md:grid-cols-2">
             <TransactionList refreshKey={refreshKey} />
-            <BudgetManager />
           </div>
         </div>
       </main>
