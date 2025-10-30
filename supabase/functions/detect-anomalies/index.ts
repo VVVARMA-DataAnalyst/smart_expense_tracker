@@ -55,6 +55,10 @@ serve(async (req) => {
     // Calculate averages and detect anomalies
     for (const [categoryId, stats] of Object.entries(categoryStats)) {
       const amounts = stats.amounts;
+      
+      // Need at least 3 transactions in a category to detect anomalies
+      if (amounts.length < 3) continue;
+      
       const avg = amounts.reduce((a, b) => a + b, 0) / amounts.length;
       const max = Math.max(...amounts);
       const stdDev = Math.sqrt(
@@ -100,7 +104,8 @@ serve(async (req) => {
     const lastMonthTotal = lastMonthTxs?.reduce((sum, tx) => sum + parseFloat(tx.amount), 0) || 0;
     const prevMonthTotal = prevMonthTxs?.reduce((sum, tx) => sum + parseFloat(tx.amount), 0) || 0;
 
-    if (prevMonthTotal > 0) {
+    // Only compare if we have enough data in both months
+    if (prevMonthTotal > 0 && prevMonthTxs && prevMonthTxs.length >= 3 && lastMonthTxs && lastMonthTxs.length >= 3) {
       const increase = ((lastMonthTotal - prevMonthTotal) / prevMonthTotal) * 100;
       
       if (increase > 20) {
@@ -114,6 +119,11 @@ serve(async (req) => {
           is_dismissed: false
         });
       }
+    }
+    
+    // Provide helpful message when not enough data
+    if (!transactions || transactions.length < 5) {
+      console.log(`User ${user.id} has only ${transactions?.length || 0} transactions. Need more data for meaningful insights.`);
     }
 
     // Save insights to database

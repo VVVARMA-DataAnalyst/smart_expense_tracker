@@ -46,14 +46,23 @@ const InsightsPanel = () => {
   const analyzeSpending = async () => {
     setIsAnalyzing(true);
     try {
-      const { error } = await supabase.functions.invoke("detect-anomalies");
+      const { data, error } = await supabase.functions.invoke("detect-anomalies");
 
       if (error) throw error;
 
-      toast({
-        title: "Analysis complete",
-        description: "Your spending has been analyzed for insights.",
-      });
+      const insightsGenerated = data?.insights_generated || 0;
+
+      if (insightsGenerated === 0) {
+        toast({
+          title: "Analysis complete",
+          description: "No anomalies detected. Add more transactions over time to see spending patterns and insights.",
+        });
+      } else {
+        toast({
+          title: "Analysis complete",
+          description: `Found ${insightsGenerated} new ${insightsGenerated === 1 ? 'insight' : 'insights'} about your spending.`,
+        });
+      }
 
       await loadInsights();
     } catch (error) {
@@ -125,11 +134,15 @@ const InsightsPanel = () => {
           </div>
         ) : insights.length === 0 ? (
           <div className="text-center py-8">
-            <p className="text-muted-foreground mb-4">
-              No insights available yet. Run an analysis to get started.
+            <Info className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+            <p className="text-muted-foreground mb-2 font-medium">
+              No insights detected
             </p>
-            <Button onClick={analyzeSpending} disabled={isAnalyzing}>
-              Run Analysis
+            <p className="text-sm text-muted-foreground mb-4 max-w-md mx-auto">
+              AI analysis requires at least 3 transactions per category over multiple months to detect spending patterns and anomalies. Keep adding transactions to unlock insights!
+            </p>
+            <Button onClick={analyzeSpending} disabled={isAnalyzing} variant="outline">
+              {isAnalyzing ? "Analyzing..." : "Run Analysis Again"}
             </Button>
           </div>
         ) : (
