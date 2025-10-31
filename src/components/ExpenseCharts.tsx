@@ -28,6 +28,7 @@ interface Transaction {
   category_id: string;
   merchant: string;
 }
+
 interface ExpenseChartsProps {
   refreshKey?: number;
 }
@@ -82,6 +83,8 @@ const ExpenseCharts = ({ refreshKey = 0 }: ExpenseChartsProps) => {
   const categoryData = () => {
     const grouped = transactions.reduce((acc, t) => {
       const category = t.category_name || 'Uncategorized';
+
+      
       acc[category] = (acc[category] || 0) + t.amount;
       return acc;
     }, {} as Record<string, number>);
