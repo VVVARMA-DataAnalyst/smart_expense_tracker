@@ -17,6 +17,7 @@ import SavingsGoals from "@/components/SavingsGoals";
 import SmartRules from "@/components/SmartRules";
 import RecommendationsPanel from "@/components/RecommendationsPanel";
 import SharedBudgets from "@/components/SharedBudgets";
+import ExpenseCharts from "@/components/ExpenseCharts";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -99,6 +100,8 @@ const Dashboard = () => {
           </Card>
 
           <SpendingSummary refreshKey={refreshKey} />
+          
+          <ExpenseCharts refreshKey={refreshKey} />
           
           <RecommendationsPanel />
           
