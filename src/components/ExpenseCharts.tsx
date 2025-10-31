@@ -8,8 +8,6 @@ import {
   Bar, 
   BarChart, 
   Cell,
-  Line,
-  LineChart,
   Pie, 
   PieChart,
   ResponsiveContainer,
@@ -17,9 +15,8 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Legend
 } from "recharts";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, subMonths } from "date-fns";
+import { format, subMonths } from "date-fns";
 
 interface Transaction {
   id: string;
@@ -27,6 +24,11 @@ interface Transaction {
   amount: number;
   category_id: string;
   merchant: string;
+}
+
+interface Category {
+  id: string;
+  name: string;
 }
 
 interface ExpenseChartsProps {
@@ -43,25 +45,30 @@ const COLORS = [
 
 const ExpenseCharts = ({ refreshKey = 0 }: ExpenseChartsProps) => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadTransactions();
+    loadTransactionsAndCategories();
   }, [refreshKey]);
-
-  const loadTransactions = async () => {
+  
+  const loadTransactionsAndCategories = async () => {
     setLoading(true);
     const threeMonthsAgo = subMonths(new Date(), 3);
-    
-    const { data, error } = await supabase
-      .from('transactions')
-      .select('*')
-      .gte('date', threeMonthsAgo.toISOString())
-      .order('date', { ascending: true });
 
-    if (!error && data) {
-      setTransactions(data);
-    }
+    const [{ data: txData, error: txError }, { data: catData, error: catError }] = await Promise.all([
+      supabase
+        .from('transactions')
+        .select('*')
+        .gte('date', threeMonthsAgo.toISOString())
+        .order('date', { ascending: true }),
+      supabase
+        .from('categories')
+        .select('id, name')
+    ]);
+
+    if (!txError && txData) setTransactions(txData);
+    if (!catError && catData) setCategories(catData);
     setLoading(false);
   };
 
@@ -79,20 +86,23 @@ const ExpenseCharts = ({ refreshKey = 0 }: ExpenseChartsProps) => {
     }));
   };
 
-  // Category breakdown
+  // Category breakdown with category names
   const categoryData = () => {
-    const grouped = transactions.reduce((acc, t) => {
-      const category = t.category_id || 'Uncategorized';
+    const categoryMap = categories.reduce((acc, cat) => {
+      acc[cat.id] = cat.name;
+      return acc;
+    }, {} as Record<string, string>);
 
-      
-      acc[category] = (acc[category] || 0) + t.amount;
+    const grouped = transactions.reduce((acc, t) => {
+      const categoryName = categoryMap[t.category_id] || 'Uncategorized';
+      acc[categoryName] = (acc[categoryName] || 0) + t.amount;
       return acc;
     }, {} as Record<string, number>);
 
     return Object.entries(grouped)
-      .map(([category, amount]) => ({
-        name: category,
-        value: Number(amount.toFixed(2))
+      .map(([name, value]) => ({
+        name,
+        value: Number(value.toFixed(2))
       }))
       .sort((a, b) => b.value - a.value);
   };
@@ -164,6 +174,7 @@ const ExpenseCharts = ({ refreshKey = 0 }: ExpenseChartsProps) => {
             <TabsTrigger value="monthly">Monthly</TabsTrigger>
           </TabsList>
 
+          {/* Daily Trend */}
           <TabsContent value="trend" className="space-y-4">
             <div className="h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
@@ -175,34 +186,16 @@ const ExpenseCharts = ({ refreshKey = 0 }: ExpenseChartsProps) => {
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis 
-                    dataKey="date" 
-                    className="text-xs"
-                    tick={{ fill: 'hsl(var(--muted-foreground))' }}
-                  />
-                  <YAxis 
-                    className="text-xs"
-                    tick={{ fill: 'hsl(var(--muted-foreground))' }}
-                  />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: 'hsl(var(--card))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '6px'
-                    }}
-                  />
-                  <Area 
-                    type="monotone" 
-                    dataKey="amount" 
-                    stroke="hsl(var(--primary))" 
-                    fillOpacity={1} 
-                    fill="url(#colorAmount)" 
-                  />
+                  <XAxis dataKey="date" className="text-xs" tick={{ fill: 'hsl(var(--muted-foreground))' }} />
+                  <YAxis className="text-xs" tick={{ fill: 'hsl(var(--muted-foreground))' }} />
+                  <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '6px' }} />
+                  <Area type="monotone" dataKey="amount" stroke="hsl(var(--primary))" fillOpacity={1} fill="url(#colorAmount)" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
           </TabsContent>
 
+          {/* Categories */}
           <TabsContent value="categories" className="space-y-4">
             <div className="h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
@@ -221,69 +214,36 @@ const ExpenseCharts = ({ refreshKey = 0 }: ExpenseChartsProps) => {
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: 'hsl(var(--card))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '6px'
-                    }}
-                  />
+                  <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '6px' }} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
           </TabsContent>
 
+          {/* Merchants */}
           <TabsContent value="merchants" className="space-y-4">
             <div className="h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={merchantData()} layout="vertical">
                   <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis 
-                    type="number"
-                    className="text-xs"
-                    tick={{ fill: 'hsl(var(--muted-foreground))' }}
-                  />
-                  <YAxis 
-                    dataKey="merchant" 
-                    type="category" 
-                    width={100}
-                    className="text-xs"
-                    tick={{ fill: 'hsl(var(--muted-foreground))' }}
-                  />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: 'hsl(var(--card))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '6px'
-                    }}
-                  />
+                  <XAxis type="number" className="text-xs" tick={{ fill: 'hsl(var(--muted-foreground))' }} />
+                  <YAxis dataKey="merchant" type="category" width={100} className="text-xs" tick={{ fill: 'hsl(var(--muted-foreground))' }} />
+                  <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '6px' }} />
                   <Bar dataKey="amount" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
           </TabsContent>
 
+          {/* Monthly */}
           <TabsContent value="monthly" className="space-y-4">
             <div className="h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={monthlyData()}>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis 
-                    dataKey="month"
-                    className="text-xs"
-                    tick={{ fill: 'hsl(var(--muted-foreground))' }}
-                  />
-                  <YAxis 
-                    className="text-xs"
-                    tick={{ fill: 'hsl(var(--muted-foreground))' }}
-                  />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: 'hsl(var(--card))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '6px'
-                    }}
-                  />
+                  <XAxis dataKey="month" className="text-xs" tick={{ fill: 'hsl(var(--muted-foreground))' }} />
+                  <YAxis className="text-xs" tick={{ fill: 'hsl(var(--muted-foreground))' }} />
+                  <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '6px' }} />
                   <Bar dataKey="amount" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
