@@ -82,7 +82,7 @@ const ExpenseCharts = ({ refreshKey = 0 }: ExpenseChartsProps) => {
   // Category breakdown
   const categoryData = () => {
     const grouped = transactions.reduce((acc, t) => {
-      const category = t.category_name || 'Uncategorized';
+      const category = t.category_id || 'Uncategorized';
 
       
       acc[category] = (acc[category] || 0) + t.amount;
