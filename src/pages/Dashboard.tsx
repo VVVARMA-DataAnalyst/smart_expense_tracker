@@ -5,7 +5,7 @@ import { User, Session } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, Plus, Wallet } from "lucide-react";
+import { LogOut, Plus, Wallet, Settings } from "lucide-react";
 import AddTransactionDialog from "@/components/AddTransactionDialog";
 import TransactionList from "@/components/TransactionList";
 import SpendingSummary from "@/components/SpendingSummary";
@@ -70,10 +70,16 @@ const Dashboard = () => {
             <Wallet className="h-6 w-6 text-primary" />
             <h1 className="text-2xl font-bold">Expense Tracker</h1>
           </div>
-          <Button variant="ghost" onClick={handleSignOut}>
-            <LogOut className="h-4 w-4 mr-2" />
-            Sign Out
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" onClick={() => navigate('/settings')} aria-label="Open settings">
+              <Settings className="h-4 w-4 mr-2" />
+              Settings
+            </Button>
+            <Button variant="ghost" onClick={handleSignOut} aria-label="Sign out">
+              <LogOut className="h-4 w-4 mr-2" />
+              Sign Out
+            </Button>
+          </div>
         </div>
       </header>
 

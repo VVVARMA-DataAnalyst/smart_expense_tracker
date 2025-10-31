@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { Loader2, Download } from "lucide-react";
+import CSVImportDialog from "./CSVImportDialog";
 
 interface Transaction {
   id: string;
@@ -115,10 +116,13 @@ const TransactionList = ({ refreshKey }: TransactionListProps) => {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Recent Transactions</CardTitle>
-        <Button onClick={exportToCSV} variant="outline" size="sm">
-          <Download className="h-4 w-4 mr-2" />
-          Export CSV
-        </Button>
+        <div className="flex gap-2">
+          <CSVImportDialog onSuccess={loadTransactions} />
+          <Button onClick={exportToCSV} variant="outline" size="sm" aria-label="Export transactions to CSV">
+            <Download className="h-4 w-4 mr-2" />
+            Export CSV
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         {isLoading ? (
