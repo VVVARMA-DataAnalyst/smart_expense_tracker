@@ -2,9 +2,8 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.76.1";
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
 serve(async (req) => {
@@ -13,47 +12,39 @@ serve(async (req) => {
   }
 
   try {
-    // 🔐 Initialize Supabase client
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) throw new Error("Missing Authorization header");
-
+    const authHeader = req.headers.get("Authorization")!;
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const lovableApiKey = Deno.env.get("LOVABLE_API_KEY")!;
+
     const supabase = createClient(supabaseUrl, supabaseKey, {
       global: { headers: { Authorization: authHeader } },
     });
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) throw new Error("Unauthorized or missing user");
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Unauthorized");
 
-    // 📊 Get user's last 3 months transactions
+    // Get transactions for past 3 months
     const threeMonthsAgo = new Date();
     threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
 
-    const { data: transactions, error: txnError } = await supabase
+    const { data: transactions, error: txError } = await supabase
       .from("transactions")
-      .select("id, amount, date, category_id, categories(name)")
+      .select("amount, category_id, categories(name)")
       .eq("user_id", user.id)
-      .gte("date", threeMonthsAgo.toISOString())
-      .order("date", { ascending: false });
+      .gte("date", threeMonthsAgo.toISOString());
 
-    if (txnError) throw txnError;
+    if (txError) throw txError;
+
     if (!transactions || transactions.length === 0) {
-      return new Response(
-        JSON.stringify({ message: "No transactions found" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ message: "No transactions found" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    // 🧮 Analyze spending by category
-    const categorySpending = new Map<
-      string,
-      { total: number; count: number; name: string }
-    >();
-
-    transactions.forEach((t) => {
+    // Summarize spending
+    const categorySpending = new Map<string, { total: number; count: number; name: string }>();
+    for (const t of transactions) {
       const catId = t.category_id || "uncategorized";
       const catName = t.categories?.name || "Uncategorized";
       if (!categorySpending.has(catId)) {
@@ -62,130 +53,81 @@ serve(async (req) => {
       const cat = categorySpending.get(catId)!;
       cat.total += Number(t.amount);
       cat.count += 1;
-    });
-
-    // 🧠 Generate AI recommendations with Lovable AI
-    const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
-    if (!lovableApiKey) throw new Error("LOVABLE_API_KEY not configured");
+    }
 
     const spendingSummary = Array.from(categorySpending.values())
-      .map(
-        (d) =>
-          `${d.name}: $${d.total.toFixed(2)} (${d.count} transactions)`
-      )
+      .map((v) => `${v.name}: $${v.total.toFixed(2)} (${v.count} txns)`)
       .join("\n");
 
-    const prompt = `
-You are a financial advisor AI. Based on the user's last 3 months of spending, provide 3–5 realistic, personalized savings recommendations.
+    const prompt = `You are an expert financial advisor. Based on this user's spending data, create 3-5 clear, actionable savings recommendations.
 
-Spending breakdown:
+Spending Summary:
 ${spendingSummary}
 
-Each recommendation should be returned as valid JSON array objects in this structure:
+Return recommendations in this **strict JSON format**:
 [
   {
-    "title": "Short actionable title",
-    "description": "Detailed step-by-step suggestion",
-    "potential_savings": 25.50,
-    "category": "Food & Dining"
+    "title": "string",
+    "description": "string",
+    "potential_savings": number
   }
-]
-If no savings are applicable, say: []
-`;
+]`;
 
-    const aiResponse = await fetch(
-      "https://ai.gateway.lovable.dev/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${lovableApiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
-          messages: [
-            {
-              role: "system",
-              content:
-                "You are a concise and smart AI financial coach. Always respond in pure JSON format only.",
-            },
-            { role: "user", content: prompt },
-          ],
-        }),
-      }
-    );
+    const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${lovableApiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          { role: "system", content: "Respond ONLY in JSON format with no extra text." },
+          { role: "user", content: prompt },
+        ],
+      }),
+    });
 
-    if (!aiResponse.ok) {
-      const errText = await aiResponse.text();
-      console.error("AI API Error:", aiResponse.status, errText);
-      throw new Error("Failed to generate recommendations");
-    }
+    const aiData = await aiRes.json();
+    const text = aiData?.choices?.[0]?.message?.content?.trim();
+    console.log("AI raw output:", text);
 
-    const aiData = await aiResponse.json();
-    const aiContent = aiData.choices?.[0]?.message?.content?.trim();
-
-    if (!aiContent) throw new Error("Empty AI response");
-
-    // 🧩 Parse AI JSON safely
-    let recommendationsJson;
+    let parsed: any[] = [];
     try {
-      recommendationsJson = JSON.parse(aiContent);
+      parsed = JSON.parse(text);
     } catch {
-      console.warn("AI returned non-JSON text, fallback parsing");
-      // Basic fallback for non-JSON responses
-      recommendationsJson = [
-        {
-          title: "Track expenses weekly",
-          description:
-            "Review your weekly spend in the Smart Expense Tracker to spot waste quickly.",
-          potential_savings: 15,
-          category: "General",
-        },
-      ];
+      console.error("Failed to parse AI response, using fallback format.");
     }
 
-    if (!Array.isArray(recommendationsJson) || recommendationsJson.length === 0) {
-      return new Response(
-        JSON.stringify({ message: "No actionable recommendations found" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      throw new Error("No recommendations generated by AI");
     }
 
-    // 🪄 Prepare rows for DB insert
-    const recommendations = recommendationsJson.map((rec) => ({
+    const recommendations = parsed.map((r) => ({
       user_id: user.id,
       recommendation_type: "savings",
-      title: rec.title?.trim() || "Savings Tip",
-      description: rec.description?.trim() || "Take small steps to reduce expenses.",
-      potential_savings: rec.potential_savings
-        ? Number(rec.potential_savings)
-        : null,
+      title: r.title,
+      description: r.description,
+      potential_savings: r.potential_savings || null,
       is_dismissed: false,
       is_applied: false,
       created_at: new Date().toISOString(),
     }));
 
-    // 💾 Store in DB
-    const { error: insertError } = await supabase
-      .from("recommendations")
-      .insert(recommendations);
-
+    const { error: insertError } = await supabase.from("recommendations").insert(recommendations);
     if (insertError) throw insertError;
 
     return new Response(
       JSON.stringify({
         message: "Recommendations generated successfully",
-        count: recommendations.length,
-        data: recommendations,
+        recommendations,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
     console.error("Error generating recommendations:", error);
     return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : "Unknown error",
-      }),
+      JSON.stringify({ error: error.message || "Unknown error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
